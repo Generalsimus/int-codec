@@ -1,0 +1,65 @@
+{
+  "name": "int-codec",
+  "version": "1.0.0",
+  "description": "A highly optimized, bidirectional encoder/decoder for standard Numbers and BigInts.",
+  "author": "soso tsertsvadze",
+  "license": "MIT",
+  "main": "./dist/common/index.js",
+  "module": "./dist/global/index.js",
+  "types": "./dist/common/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/common/index.d.ts",
+      "import": "./dist/global/index.js",
+      "require": "./dist/common/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsc --project tsconfig.common.json && tsc --project tsconfig.global.json",
+    "dev": "tsc -w --project tsconfig.common.json & tsc -w --project tsconfig.global.json & node --watch --watch-preserve-output ./dist/common/index.js",
+    "test": "jest",
+    "prepublishOnly": "npm run test && npm run build"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Generalsimus/int-codec.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Generalsimus/int-codec/issues"
+  },
+  "homepage": "https://github.com/Generalsimus/int-codec#readme",
+  "keywords": [
+    "bigint",
+    "number",
+    "encode",
+    "decode",
+    "cipher",
+    "hashids",
+    "base-converter",
+    "int",
+    "mask",
+    "obfuscate",
+    "id",
+    "short-id",
+    "hashids",
+    "typescript",
+    "url-shortener"
+  ],
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.6",
+    "typescript": "^5.0.0"
+  }
+}
