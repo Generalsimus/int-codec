@@ -1,18 +1,22 @@
 {
   "compilerOptions": {
-    "moduleResolution": "classic",
+    "moduleResolution": "node",
     "noImplicitAny": true,
     "removeComments": false,
     "preserveConstEnums": true,
     "sourceMap": true,
     "declaration": true,
     "target": "ES2020",
-    "strictNullChecks": false,
     "isolatedModules": true,
     "skipLibCheck": true,
     "rootDir": "./",
     "declarationDir": "./dist",
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "strict": true,
   },
-  "exclude": ["./dist/", "node_modules", "./test"]
+  "exclude": [
+    "./dist/",
+    "node_modules",
+    "./test"
+  ]
 }

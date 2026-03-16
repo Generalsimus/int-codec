@@ -1,169 +1,134 @@
-import { createBigintPermutations } from "./utils";
+import { Codec, CodecOptions } from "./index";
 
-export interface BigIntCodecOptions {
-    characters?: string;
-    wordLength?: number;
-}
 
-export interface BigIntCodec {
-    encode: (decodeBigint: bigint) => string;
-    decode: (encodeString: string) => bigint;
-}
+export type BigIntCodec = Codec<bigint>
 
-// Extracted constant (0 to 65535 = 65536 possibilities)
-const CHAR_BASE_JS = 65536n;
+const MAX_UNICODE_CODE = 0x10FFFF;
 
-export const createBigIntCodec = (options?: BigIntCodecOptions): BigIntCodec => {
+const UNICODE_BASE_JS = BigInt(MAX_UNICODE_CODE + 1);
+
+export const createBigIntCodec = (options?: CodecOptions): BigIntCodec => {
     if (!options) {
-        return createCodecToString();
+        return createCodecToString({});
     }
 
-    const { characters, wordLength } = options;
+    const { characters, minStringLength, maxStringLength } = options;
 
-    if (typeof characters === "string" && typeof wordLength === "number") {
-        return createCodecToWord({ characters, wordLength });
-    }
     if (typeof characters === "string") {
-        return createCodecToCharString({ characters });
-    }
-    if (typeof wordLength === "number") {
-        return createCodecToMaxChars({ wordLength });
+        return createCodecToCharString({ characters, minStringLength, maxStringLength });
     }
 
-    return createCodecToString();
+    return createCodecToString(options);
 };
 
-const createCodecToString = (): BigIntCodec => ({
-    encode: (decodeBigint) => {
-        if (decodeBigint === 0n) return String.fromCharCode(0);
+const createCodecToString = ({
+    minStringLength = 0,
+    maxStringLength = Infinity
+}: Pick<CodecOptions, "minStringLength" | "maxStringLength">): BigIntCodec => {
 
-        let encodedString = "";
-        let currentBigint = decodeBigint;
+    const startingOffset = minStringLength > 1 ? UNICODE_BASE_JS ** BigInt(minStringLength - 1) : 0n;
 
-        while (currentBigint > 0n) {
-            encodedString = String.fromCharCode(Number(currentBigint % CHAR_BASE_JS)) + encodedString;
-            currentBigint /= CHAR_BASE_JS;
-        }
-
-        return encodedString;
-    },
-    decode: (encodeString) => {
-        let decodedNumber = 0n;
-
-        for (let i = 0; i < encodeString.length; i++) {
-            decodedNumber = decodedNumber * CHAR_BASE_JS + BigInt(encodeString.charCodeAt(i));
-        }
-
-        return decodedNumber;
-    },
-});
-
-const createCodecToCharString = ({
-    characters,
-}: Required<Omit<BigIntCodecOptions, "wordLength">>): BigIntCodec => {
-    // OPTIMIZATION: Cache base outside the return closure
-    const base = BigInt(characters.length);
+    const maxAllowedInput = maxStringLength !== Infinity ? (UNICODE_BASE_JS ** BigInt(maxStringLength)) - startingOffset : null;
 
     return {
-        encode: (decodeNumber) => {
-            if (decodeNumber === 0n) return characters[0];
+        encode: (decodeBigint) => {
+            if (decodeBigint < 0n) {
+                throw new Error("Encode Error: Number cannot be negative.");
+            }
+            if (maxAllowedInput !== null && decodeBigint >= maxAllowedInput) {
+                throw new Error("Number exceeds max length.");
+            }
+
+            let currentBigint = decodeBigint + startingOffset;
 
             let encodedString = "";
-            let currentNumber = decodeNumber;
 
-            while (currentNumber > 0n) {
-                const remainder = Number(currentNumber % base);
-                encodedString = characters[remainder] + encodedString;
-                currentNumber /= base;
+            while (currentBigint > 0n) {
+                const remainder = Number(currentBigint % UNICODE_BASE_JS);
+
+                encodedString = String.fromCodePoint(remainder) + encodedString;
+                currentBigint /= UNICODE_BASE_JS;
             }
 
             return encodedString;
         },
         decode: (encodeString) => {
+            const encodeStringArray = [...encodeString]
+            if (encodeStringArray.length < minStringLength) {
+                throw new Error(`Decode Error: String must be at least ${minStringLength} characters.`);
+            }
+            if (encodeStringArray.length > maxStringLength) {
+                throw new Error(`Decode Error: String cannot exceed ${maxStringLength} characters.`);
+            }
             let decodedNumber = 0n;
 
-            for (let i = 0; i < encodeString.length; i++) {
-                const index = BigInt(characters.indexOf(encodeString[i]));
-                decodedNumber = decodedNumber * base + index;
+
+            for (const char of encodeStringArray) {
+                const charCode = BigInt(char.codePointAt(0)!);
+                decodedNumber = decodedNumber * UNICODE_BASE_JS + charCode;
             }
 
-            return decodedNumber;
+            return decodedNumber - startingOffset;
         },
     };
-};
 
-const createCodecToWord = ({
+
+}
+
+const createCodecToCharString = ({
     characters,
-    wordLength,
-}: Required<BigIntCodecOptions>): BigIntCodec => {
-    const charArray = characters.split("");
-    const permutations = createBigintPermutations(BigInt(charArray.length), BigInt(wordLength));
+    minStringLength = 0,
+    maxStringLength = Infinity
+}: (Omit<CodecOptions, "characters"> & Required<Pick<CodecOptions, "characters">>)): BigIntCodec => {
+    const charactersArray = [...characters]
+    const base = BigInt(charactersArray.length);
 
+    const startingOffset = minStringLength > 1 ? base ** BigInt(minStringLength - 1) : 0n;
+
+    const maxAllowedInput = maxStringLength !== Infinity ? (base ** BigInt(maxStringLength)) - startingOffset : null;
     return {
-        encode: (decodeNumber) => {
-            const chars = [...charArray];
-            let permutation = "";
-            let currentNumber = decodeNumber;
-
-            for (let i = 0; i < wordLength; i++) {
-                const remainingPermutations = permutations[i];
-                const characterIndex = Number(currentNumber / remainingPermutations);
-
-                permutation += chars[characterIndex];
-                chars.splice(characterIndex, 1);
-                currentNumber %= remainingPermutations;
+        encode: (decodeBigint) => {
+            if (decodeBigint < 0n) {
+                throw new Error("Encode Error: Number cannot be negative.");
+            }
+            if (maxAllowedInput !== null && decodeBigint >= maxAllowedInput) {
+                throw new Error("Number exceeds max length.");
             }
 
-            return permutation;
+            let currentBigint = decodeBigint + startingOffset;
+            let encodedString = "";
+
+            do {
+                // Change UNICODE_BASE_JS back to base!
+                const remainder = Number(currentBigint % base);
+                encodedString = charactersArray[remainder] + encodedString;
+                currentBigint /= base;
+            } while (currentBigint > 0n);
+
+            return encodedString;
         },
         decode: (encodeString) => {
-            const chars = [...charArray];
-            let index = 0n;
-
-            for (let i = 0; i < wordLength; i++) {
-                const characterIndex = chars.indexOf(encodeString[i]);
-                const remainingPermutations = permutations[i];
-
-                index += BigInt(characterIndex) * remainingPermutations;
-                chars.splice(characterIndex, 1);
+            const encodeStringArray = [...encodeString]
+            if (encodeStringArray.length < minStringLength) {
+                throw new Error(`Decode Error: String must be at least ${minStringLength} characters.`);
+            }
+            if (encodeStringArray.length > maxStringLength) {
+                throw new Error(`Decode Error: String cannot exceed ${maxStringLength} characters.`);
             }
 
-            return index;
-        },
-    };
-};
+            let decodedNumber = 0n;
 
-const createCodecToMaxChars = ({
-    wordLength,
-}: Required<Omit<BigIntCodecOptions, "characters">>): BigIntCodec => {
-    const permutations = createBigintPermutations(CHAR_BASE_JS, BigInt(wordLength));
+            for (let i = 0; i < encodeStringArray.length; i++) {
+                const charIndex = charactersArray.indexOf(encodeStringArray[i]);
 
-    return {
-        encode: (decodeNumber) => {
-            let permutation = "";
-            let currentNumber = decodeNumber;
-
-            for (let i = 0; i < wordLength; i++) {
-                const remainingPermutations = permutations[i];
-                const characterIndex = Number(currentNumber / remainingPermutations);
-
-                permutation += String.fromCharCode(characterIndex);
-                currentNumber %= remainingPermutations;
+                if (charIndex === -1) {
+                    throw new Error(`Decode Error: Invalid character '${encodeStringArray[i]}'`);
+                }
+                decodedNumber = decodedNumber * base + BigInt(charIndex);
             }
 
-            return permutation;
-        },
-        decode: (encodeString) => {
-            let index = 0n;
 
-            for (let i = 0; i < wordLength; i++) {
-                const characterIndex = BigInt(encodeString.charCodeAt(i));
-                const remainingPermutations = permutations[i];
-
-                index += characterIndex * remainingPermutations;
-            }
-
-            return index;
+            return decodedNumber - startingOffset;
         },
     };
 };

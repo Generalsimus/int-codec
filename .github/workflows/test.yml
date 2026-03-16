@@ -1,10 +1,9 @@
-name: Test BigintDecimal
+name: Test int-codec
 
 on:
-  push:
-    branches: [ "main", "master" ]
   pull_request:
     branches: [ "main", "master" ]
+    types: [ opened ]
 
 jobs:
   test:
