@@ -1,6 +1,6 @@
 {
   "name": "int-codec",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A highly optimized, bidirectional encoder/decoder for standard Numbers and BigInts.",
   "author": "soso tsertsvadze",
   "license": "MIT",
