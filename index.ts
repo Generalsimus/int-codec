@@ -2,8 +2,8 @@
 export interface CodecOptions {
     characters?: string;
 
-    minStringLength?: number;
-    maxStringLength?: number;
+    minStringLength?: number | undefined;
+    maxStringLength?: number | undefined;
 }
 export interface Codec<E extends number | bigint> {
     encode: (decodeNumber: E) => string;

@@ -18,11 +18,11 @@ describe("BigIntCodec (Default Unicode String)", () => {
     it("CRITICAL: should safely bypass the Unicode surrogate forbidden zone without crashing", () => {
         // 55296n is 0xD800, the exact start of the forbidden zone
         const dangerousNumber = 55296n;
-        let encoded;
+        let encoded = "";
         expect(() => {
             encoded = codec.encode(dangerousNumber);
         }).not.toThrow();
-        expect(codec.decode(encoded!)).toBe(dangerousNumber);
+        expect(codec.decode(encoded)).toBe(dangerousNumber);
     });
 
     it("should respect minWordLength and shift starting offset", () => {

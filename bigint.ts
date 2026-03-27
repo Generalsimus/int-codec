@@ -108,7 +108,7 @@ const createCodecToCharString = ({
             return encodedString;
         },
         decode: (encodeString) => {
-            const encodeStringArray = [...encodeString]
+            const encodeStringArray: string[] = [...encodeString]
             if (encodeStringArray.length < minStringLength) {
                 throw new Error(`Decode Error: String must be at least ${minStringLength} characters.`);
             }
@@ -119,7 +119,7 @@ const createCodecToCharString = ({
             let decodedNumber = 0n;
 
             for (let i = 0; i < encodeStringArray.length; i++) {
-                const charIndex = charactersArray.indexOf(encodeStringArray[i]);
+                const charIndex = charactersArray.indexOf(encodeStringArray[i]!);
 
                 if (charIndex === -1) {
                     throw new Error(`Decode Error: Invalid character '${encodeStringArray[i]}'`);
