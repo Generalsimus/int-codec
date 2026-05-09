@@ -3,7 +3,6 @@ name: Test int-codec
 on:
   pull_request:
     branches: [ "main", "master" ]
-    types: [ opened ]
 
 jobs:
   test:

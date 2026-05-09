@@ -18,6 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -44,10 +45,25 @@ jobs:
 
       - name: Bump version (patch)
         run: |
-          npm version patch -m "chore(release): %s [skip ci]"
+          # npm outputs "v1.0.13" (with v prefix already)
+          TAG=$(npm version patch --no-git-tag-version)
+          VERSION="${TAG#v}"
+          git add package.json package-lock.json
+          # Remove stale tag from a previous failed run if it exists
+          git tag -d "$TAG" 2>/dev/null || true
+          git push origin ":refs/tags/$TAG" 2>/dev/null || true
+          git commit -m "chore(release): $VERSION [skip ci]"
+          git tag -a "$TAG" -m "chore(release): $VERSION [skip ci]"
 
       - name: Publish with Trusted Publishing
-        run: npm publish --provenance --access public
+        run: |
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if npm view "${PKG_NAME}@${PKG_VERSION}" version 2>/dev/null | grep -qF "$PKG_VERSION"; then
+            echo "Version $PKG_VERSION already published, skipping"
+          else
+            npm publish --provenance --access public
+          fi
 
       - name: Push version + tags
         run: git push --follow-tags
